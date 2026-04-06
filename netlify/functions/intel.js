@@ -1,87 +1,102 @@
-// Secure proxy: API key in Netlify env vars, never touches browser.
-// Returns 2 free insight cards (market direction + price trend).
-// Full 6-card report reserved for premium.
-
 export default async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: cors() });
-  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { status: 200, headers: cors() });
+  }
+  if (req.method !== "POST") {
+    return resp({ error: "POST only" }, 405);
+  }
 
   const KEY = process.env.GEMINI_API_KEY;
-  if (!KEY) return json({ error: "GEMINI_API_KEY not set" }, 500);
+  if (!KEY) {
+    return resp({ error: "GEMINI_API_KEY not set" }, 500);
+  }
 
   let body;
-  try { body = await req.json(); } catch { return json({ error: "Bad JSON" }, 400); }
+  try {
+    body = await req.json();
+  } catch {
+    return resp({ error: "Bad JSON" }, 400);
+  }
+
   const { state, city, basePrice, carpet } = body;
-  if (!state || !city) return json({ error: "state and city required" }, 400);
+  if (!state || !city) {
+    return resp({ error: "state, city required" }, 400);
+  }
 
   const psf = carpet > 0 ? Math.round(basePrice / carpet) : 0;
-  const prompt = `You are an independent Indian real estate market analyst. Zero builder affiliation.
+  const priceLakh = Math.round((basePrice || 0) / 100000);
 
-A buyer is looking at an apartment in ${city}, ${state} at Rs ${(basePrice||0).toLocaleString("en-IN")} (Rs ${psf}/sqft, ${carpet} sqft).
+  const prompt = `You are an independent Indian real estate analyst. Zero builder affiliation.
 
-Search the web for the MOST RECENT data (2024-2026 only) and return this exact JSON. If no search-backed data exists for a field, return null. NEVER guess.
+Buyer looking at apartment in ${city}, ${state} at Rs ${priceLakh} lakh (Rs ${psf}/sqft, ${carpet} sqft).
 
+Return ONLY this JSON (no markdown, no backticks):
 {
-  "market_direction": {
-    "signal": "buyers_market" | "sellers_market" | "balanced" | null,
-    "reason": "One sentence with specific data" | null
-  },
-  "price_trend": {
-    "direction": "rising" | "stable" | "falling" | null,
-    "yoy_pct": number | null,
-    "detail": "One sentence with data" | null
-  },
-  "rate_outlook": {
-    "repo": number | null,
-    "direction": "likely_cut" | "hold" | "likely_hike" | null,
-    "note": "One sentence" | null
-  },
-  "buyer_tip": "One specific, actionable tip for this city and price point" | null,
-  "data_freshness": "Month Year of most recent data" | null
+  "market_direction": {"signal":"buyers_market" or "sellers_market" or "balanced" or null,"reason":"one sentence" or null},
+  "price_trend": {"direction":"rising" or "stable" or "falling" or null,"yoy_pct":number or null,"detail":"one sentence" or null},
+  "rate_outlook": {"repo":number or null,"direction":"likely_cut" or "hold" or "likely_hike" or null,"note":"one sentence" or null},
+  "buyer_tip":"one actionable tip for this city" or null,
+  "data_freshness":"month year" or null
 }
+Use null if unsure. Never guess. Be specific to ${city}.`;
 
-RULES: Search-backed only. Null > guess. Recent data only. Be specific to this city.`;
+  const attempts = [
+    { model: "gemini-2.0-flash", ground: false },
+    { model: "gemini-2.0-flash", ground: true },
+    { model: "gemini-1.5-flash", ground: false },
+  ];
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 1024, response_mime_type: "application/json" },
-        }),
+  for (const att of attempts) {
+    try {
+      const reqBody = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.15, maxOutputTokens: 1024 },
+      };
+      if (att.ground) {
+        reqBody.tools = [{ google_search: {} }];
       }
-    );
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Gemini error:", res.status, err);
-      return json({ error: "AI unavailable", status: res.status }, 502);
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${att.model}:generateContent?key=${KEY}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reqBody) }
+      );
+
+      if (!r.ok) {
+        console.error(`${att.model} g=${att.ground}: ${r.status}`);
+        continue;
+      }
+
+      const d = await r.json();
+      const txt = d?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
+      if (!txt) continue;
+
+      const clean = txt.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
+      const start = clean.indexOf("{");
+      const end = clean.lastIndexOf("}");
+      if (start === -1 || end === -1) continue;
+
+      let parsed;
+      try {
+        parsed = JSON.parse(clean.substring(start, end + 1));
+      } catch {
+        console.error(`${att.model} parse fail`);
+        continue;
+      }
+
+      const sources = (d?.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
+        .map(c => ({ title: c.web?.title, url: c.web?.uri })).filter(s => s.url);
+
+      return resp({ data: parsed, sources, model: att.model, grounded: att.ground && sources.length > 0, ts: new Date().toISOString() });
+    } catch (e) {
+      console.error(`${att.model} err:`, e.message);
+      continue;
     }
-
-    const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
-    if (!text) return json({ error: "Empty AI response" }, 502);
-
-    let parsed;
-    try { parsed = JSON.parse(text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim()); }
-    catch { parsed = { raw: text, parse_error: true }; }
-
-    const sources = (data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
-      .map(c => ({ title: c.web?.title, url: c.web?.uri }))
-      .filter(s => s.url);
-
-    return json({ data: parsed, sources, ts: new Date().toISOString() });
-  } catch (e) {
-    console.error("Function error:", e);
-    return json({ error: e.message }, 500);
   }
+
+  return resp({ error: "AI unavailable. Try again." }, 502);
 };
 
-function json(d, s = 200) {
+function resp(d, s = 200) {
   return new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", ...cors() } });
 }
 function cors() {
