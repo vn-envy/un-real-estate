@@ -8,19 +8,19 @@ export default async (req) => {
 
   const KEY = process.env.GEMINI_API_KEY;
   if (!KEY) {
-    return resp({ error: "GEMINI_API_KEY not set" }, 500);
+    return resp({ error: "GEMINI_API_KEY not configured. Go to Netlify Site Settings > Environment Variables and add it." }, 500);
   }
 
   let body;
   try {
     body = await req.json();
   } catch {
-    return resp({ error: "Bad JSON" }, 400);
+    return resp({ error: "Invalid request body" }, 400);
   }
 
   const { state, city, basePrice, carpet } = body;
   if (!state || !city) {
-    return resp({ error: "state, city required" }, 400);
+    return resp({ error: "Missing state or city" }, 400);
   }
 
   const psf = carpet > 0 ? Math.round(basePrice / carpet) : 0;
@@ -30,76 +30,122 @@ export default async (req) => {
 
 Buyer looking at apartment in ${city}, ${state} at Rs ${priceLakh} lakh (Rs ${psf}/sqft, ${carpet} sqft).
 
-Return ONLY this JSON (no markdown, no backticks):
-{
-  "market_direction": {"signal":"buyers_market" or "sellers_market" or "balanced" or null,"reason":"one sentence" or null},
-  "price_trend": {"direction":"rising" or "stable" or "falling" or null,"yoy_pct":number or null,"detail":"one sentence" or null},
-  "rate_outlook": {"repo":number or null,"direction":"likely_cut" or "hold" or "likely_hike" or null,"note":"one sentence" or null},
-  "buyer_tip":"one actionable tip for this city" or null,
-  "data_freshness":"month year" or null
-}
-Use null if unsure. Never guess. Be specific to ${city}.`;
+Return ONLY valid JSON with no other text:
+{"market_direction":{"signal":"buyers_market" or "sellers_market" or "balanced" or null,"reason":"one sentence" or null},"price_trend":{"direction":"rising" or "stable" or "falling" or null,"yoy_pct":number or null,"detail":"one sentence" or null},"rate_outlook":{"repo":number or null,"direction":"likely_cut" or "hold" or "likely_hike" or null,"note":"one sentence" or null},"buyer_tip":"one tip for this city" or null,"data_freshness":"month year" or null}
 
+Use null if unsure. Be specific to ${city}.`;
+
+  // Try models in order of reliability
   const attempts = [
-    { model: "gemini-2.0-flash", ground: false },
-    { model: "gemini-2.0-flash", ground: true },
-    { model: "gemini-1.5-flash", ground: false },
+    { model: "gemini-1.5-flash", withSearch: false },
+    { model: "gemini-1.5-flash-latest", withSearch: false },
+    { model: "gemini-2.0-flash", withSearch: false },
+    { model: "gemini-1.5-flash", withSearch: true },
   ];
+
+  const errors = [];
 
   for (const att of attempts) {
     try {
-      const reqBody = {
+      const payload = {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.15, maxOutputTokens: 1024 },
+        generationConfig: {
+          temperature: 0.15,
+          maxOutputTokens: 1024,
+        },
       };
-      if (att.ground) {
-        reqBody.tools = [{ google_search: {} }];
+
+      if (att.withSearch) {
+        payload.tools = [{ google_search: {} }];
       }
 
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${att.model}:generateContent?key=${KEY}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reqBody) }
-      );
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${att.model}:generateContent?key=${KEY}`;
 
-      if (!r.ok) {
-        console.error(`${att.model} g=${att.ground}: ${r.status}`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        errors.push(`${att.model}(search=${att.withSearch}): HTTP ${res.status} - ${errText.substring(0, 300)}`);
         continue;
       }
 
-      const d = await r.json();
-      const txt = d?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
-      if (!txt) continue;
+      const data = await res.json();
 
-      const clean = txt.replace(/```json\s*/gi, "").replace(/```\s*/gi, "").trim();
-      const start = clean.indexOf("{");
-      const end = clean.lastIndexOf("}");
-      if (start === -1 || end === -1) continue;
+      // Check for blocked content
+      if (data?.candidates?.[0]?.finishReason === "SAFETY") {
+        errors.push(`${att.model}: blocked by safety filter`);
+        continue;
+      }
+
+      const textPart = data?.candidates?.[0]?.content?.parts?.find((p) => p.text);
+      if (!textPart || !textPart.text) {
+        errors.push(`${att.model}: no text in response`);
+        continue;
+      }
+
+      // Extract JSON from response
+      const raw = textPart.text;
+      const start = raw.indexOf("{");
+      const end = raw.lastIndexOf("}");
+
+      if (start === -1 || end === -1) {
+        errors.push(`${att.model}: no JSON found in: ${raw.substring(0, 200)}`);
+        continue;
+      }
 
       let parsed;
       try {
-        parsed = JSON.parse(clean.substring(start, end + 1));
-      } catch {
-        console.error(`${att.model} parse fail`);
+        parsed = JSON.parse(raw.substring(start, end + 1));
+      } catch (e) {
+        errors.push(`${att.model}: JSON parse error: ${e.message}`);
         continue;
       }
 
-      const sources = (d?.candidates?.[0]?.groundingMetadata?.groundingChunks || [])
-        .map(c => ({ title: c.web?.title, url: c.web?.uri })).filter(s => s.url);
+      // Success - extract grounding sources if any
+      const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources = chunks
+        .map((c) => ({ title: c.web?.title || null, url: c.web?.uri || null }))
+        .filter((s) => s.url);
 
-      return resp({ data: parsed, sources, model: att.model, grounded: att.ground && sources.length > 0, ts: new Date().toISOString() });
+      return resp({
+        data: parsed,
+        sources,
+        model: att.model,
+        grounded: att.withSearch && sources.length > 0,
+        ts: new Date().toISOString(),
+      });
+
     } catch (e) {
-      console.error(`${att.model} err:`, e.message);
+      errors.push(`${att.model}: exception - ${e.message}`);
       continue;
     }
   }
 
-  return resp({ error: "AI unavailable. Try again." }, 502);
+  // All failed — return detailed errors for debugging
+  return resp({
+    error: "All AI models failed",
+    debug: errors,
+    hint: "Check: 1) GEMINI_API_KEY is valid 2) Key has Generative Language API enabled at console.cloud.google.com/apis",
+  }, 502);
 };
 
-function resp(d, s = 200) {
-  return new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", ...cors() } });
+function resp(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", ...cors() },
+  });
 }
+
 function cors() {
-  return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type" };
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 }
+
 export const config = { path: "/api/intel" };
