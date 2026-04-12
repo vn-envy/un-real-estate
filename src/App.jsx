@@ -1,9 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import LandingPage from "./LandingPage";
 
-const [landed, setLanded] = useState(() => sessionStorage.getItem("ure_v") === "1");
-if (!landed) return <LandingPage onEnter={() => { sessionStorage.setItem("ure_v","1"); setLanded(true); }} />;
-
 /* ═══ LANG ═══ */
 const S={en:{
 tag:"the real cost, before you sign",heroS:"Total Cost Architecture",heroH:"Every cost.",heroH2:"No fiction.",heroP:"Fill what you know. We reveal what nobody tells you — including how this home fits your actual life.",
@@ -138,6 +135,9 @@ function totalRentEsc(moRent,years){let t=0;for(let y=0;y<years;y++)t+=moRent*12
 
 /* ═══ APP ═══ */
 export default function App(){
+  const[landed,setLanded]=useState(()=>sessionStorage.getItem("ure_v")==="1");
+  if(!landed)return <LandingPage onEnter={()=>{sessionStorage.setItem("ure_v","1");setLanded(true);}}/>;
+
   const[lang,setLang]=useState("en");
   const t=useCallback((k,vars)=>{let s=S[lang]?.[k]||S.en[k]||k;if(vars)Object.entries(vars).forEach(([a,b])=>{s=s.replaceAll("{"+a+"}",b)});return s},[lang]);
   const hiF=lang==="hi"?"'Noto Sans Devanagari','Inter',sans-serif":"'Inter',sans-serif";
@@ -267,7 +267,7 @@ export default function App(){
     const bankSpread=rate-REPO.current;
 
     // HRA tax benefit for renters (old regime)
-    const basicSal=annualInc*0.5; // ~50% of CTC is basic
+    const basicSal=annualInc*0.4; // ~40% of CTC is basic
     const hraRcvd=basicSal*(cI.metro?0.5:0.4); // 50% metro, 40% non-metro
     const hraExempt=Math.min(hraRcvd, curRent*12 - basicSal*0.1, hraRcvd);
     const hraTaxSaved=Math.max(0,hraExempt)*0.3; // 30% bracket
