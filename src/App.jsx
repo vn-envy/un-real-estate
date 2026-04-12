@@ -134,13 +134,41 @@ function seniorCost(yr){return 75000*Math.pow(1.15,yr)+(yr<5?30000:yr<10?50000:y
 function totalRentEsc(moRent,years){let t=0;for(let y=0;y<years;y++)t+=moRent*12*Math.pow(1.05,y);return t} // FIX: proper 5% escalation
 
 /* ═══ APP ═══ */
-export default function App(){
-  const[landed,setLanded]=useState(()=>sessionStorage.getItem("ure_v")==="1");
-  if(!landed)return <LandingPage onEnter={()=>{sessionStorage.setItem("ure_v","1");setLanded(true);}}/>;
+ // ---- ALL HOOKS FIRST ----
+export default function App() {
+  const [landed, setLanded] = useState(
+    () => sessionStorage.getItem("ure_v") === "1"
+  );
 
-  const[lang,setLang]=useState("en");
-  const t=useCallback((k,vars)=>{let s=S[lang]?.[k]||S.en[k]||k;if(vars)Object.entries(vars).forEach(([a,b])=>{s=s.replaceAll("{"+a+"}",b)});return s},[lang]);
-  const hiF=lang==="hi"?"'Noto Sans Devanagari','Inter',sans-serif":"'Inter',sans-serif";
+  const [lang, setLang] = useState("en");
+
+  const t = useCallback((k, vars) => {
+    let s = S[lang]?.[k] || S.en[k] || k;
+    if (vars) {
+      Object.entries(vars).forEach(([a, b]) => {
+        s = s.replaceAll("{" + a + "}", b);
+      });
+    }
+    return s;
+  }, [lang]);
+
+  const hiF =
+    lang === "hi"
+      ? "'Noto Sans Devanagari','Inter',sans-serif"
+      : "'Inter',sans-serif";
+
+  // ---- AFTER HOOKS, THEN CONDITIONAL ----
+  if (!landed) {
+    return (
+      <LandingPage
+        onEnter={() => {
+          sessionStorage.setItem("ure_v", "1");
+          setLanded(true);
+        }}
+      />
+    );
+  }
+
 
   // Property
   const[st,setSt]=useState("telangana");const[city,setCity]=useState("hy_u");
