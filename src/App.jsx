@@ -134,41 +134,10 @@ function seniorCost(yr){return 75000*Math.pow(1.15,yr)+(yr<5?30000:yr<10?50000:y
 function totalRentEsc(moRent,years){let t=0;for(let y=0;y<years;y++)t+=moRent*12*Math.pow(1.05,y);return t} // FIX: proper 5% escalation
 
 /* ═══ APP ═══ */
- // ---- ALL HOOKS FIRST ----
-export default function App() {
-  const [landed, setLanded] = useState(
-    () => sessionStorage.getItem("ure_v") === "1"
-  );
-
-  const [lang, setLang] = useState("en");
-
-  const t = useCallback((k, vars) => {
-    let s = S[lang]?.[k] || S.en[k] || k;
-    if (vars) {
-      Object.entries(vars).forEach(([a, b]) => {
-        s = s.replaceAll("{" + a + "}", b);
-      });
-    }
-    return s;
-  }, [lang]);
-
-  const hiF =
-    lang === "hi"
-      ? "'Noto Sans Devanagari','Inter',sans-serif"
-      : "'Inter',sans-serif";
-
-  // ---- AFTER HOOKS, THEN CONDITIONAL ----
-  if (!landed) {
-    return (
-      <LandingPage
-        onEnter={() => {
-          sessionStorage.setItem("ure_v", "1");
-          setLanded(true);
-        }}
-      />
-    );
-  }
-
+function App(){
+  const[lang,setLang]=useState("en");
+  const t=useCallback((k,vars)=>{let s=S[lang]?.[k]||S.en[k]||k;if(vars)Object.entries(vars).forEach(([a,b])=>{s=s.replaceAll("{"+a+"}",b)});return s},[lang]);
+  const hiF=lang==="hi"?"'Noto Sans Devanagari','Inter',sans-serif":"'Inter',sans-serif";
 
   // Property
   const[st,setSt]=useState("telangana");const[city,setCity]=useState("hy_u");
@@ -647,3 +616,12 @@ function Lbl({children}){return (<p style={{fontSize:".48rem",fontWeight:700,col
 function Lg({c,l}){return (<span style={{fontSize:".48rem",color:"#474556",display:"flex",alignItems:"center",gap:3}}><span style={{width:6,height:3,borderRadius:1,background:c}}/>{l}</span>)}
 function TI({w,items,c,last}){return (<div style={{display:"flex",gap:10,paddingBottom:last?0:12,position:"relative"}}>{!last&&<div style={{position:"absolute",left:5,top:16,bottom:0,width:1.5,background:"#e3e2e6"}}/>}<div style={{width:12,height:12,borderRadius:99,background:c,flexShrink:0,marginTop:2}}/><div style={{flex:1}}><div style={{fontSize:".62rem",fontWeight:800,color:c,marginBottom:2,fontFamily:"'Plus Jakarta Sans'"}}>{w}</div>{items.map((it,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",gap:4}}><div style={{display:"flex",alignItems:"center",gap:4}}>{it.cash&&<span style={{width:4,height:4,borderRadius:99,background:"#ba1a1a"}}/>}<span style={{fontSize:".6rem",color:it.y?"#1a1c1e":"#787587",fontWeight:it.y?600:400,fontStyle:it.y?"normal":"italic"}}>{it.l}</span></div>{it.v&&<span style={{fontSize:".6rem",fontFamily:"'JetBrains Mono'",fontWeight:600,color:it.cash?"#ba1a1a":it.y?"#1a1c1e":"#787587",whiteSpace:"nowrap"}}>{it.v}</span>}</div>)}</div></div>)}
 function RatioCard({label,val,unit,good,warn,bad,desc}){const n=parseFloat(val);const c=n<=good?"#22c55e":n<=warn?"#f59e0b":"#ba1a1a";return (<div className="ghost" style={{padding:12,borderRadius:12,background:"#fff"}}><div style={{fontSize:".5rem",fontWeight:700,color:"#787587",marginBottom:3}}>{label}</div><div style={{fontSize:"1rem",fontWeight:900,fontFamily:"'JetBrains Mono'",color:c}}>{typeof val==="number"?Math.round(val):val}<span style={{fontSize:".58rem"}}>{unit}</span></div><p style={{fontSize:".54rem",color:"#474556",lineHeight:1.4,marginTop:3}}>{desc}</p></div>)}
+
+/* ═══ ROOT — landing gate ═══
+   Lives outside App so App's hooks always run in full.
+   Rules of Hooks: never return early before all hook calls. */
+export default function Root(){
+  const[landed,setLanded]=useState(()=>sessionStorage.getItem("ure_v")==="1");
+  if(!landed)return <LandingPage onEnter={()=>{sessionStorage.setItem("ure_v","1");setLanded(true);}}/>;
+  return <App/>;
+}
