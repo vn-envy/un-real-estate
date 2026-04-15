@@ -599,7 +599,14 @@ function App(){
               <div style={{textAlign:"center",marginTop:6,fontSize:".44rem",color:"rgba(255,255,255,.2)"}}>{lang==="hi"?"2 मिनट · कोई स्पैम नहीं":"2 min · No spam"}</div>
             </div>
           </div>
-        </div>}
+      </div>}
+
+      </div>}
+      </main>
+      <div style={{textAlign:"center",padding:"12px 16px 20px",fontSize:".48rem",color:"#787587",fontFamily:"monospace"}}>{t("foot")}<br/><strong style={{color:"#474556"}}>un-real-estate</strong></div>
+    </div>
+  );
+}
 
 /* ═══ COMPONENTS ═══ */
 function DRows({rows}){if(!rows)return null;return (<div>{rows.map((d,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f4f3f7",gap:6}}><div style={{display:"flex",alignItems:"center",gap:4,flex:1}}>{d.cash&&<span style={{width:4,height:4,borderRadius:99,background:"#ba1a1a"}}/>}<span style={{fontSize:".62rem",color:d.b?"#1a1c1e":d.w?"#ba1a1a":"#474556",fontWeight:d.b?800:500}}>{d.l}</span></div><span style={{fontSize:".62rem",fontFamily:"'JetBrains Mono'",fontWeight:d.b?800:600,color:d.w?"#ba1a1a":"#1a1c1e",whiteSpace:"nowrap"}}>{typeof d.v==="number"?fF(d.v):d.v}</span></div>)}</div>)}
