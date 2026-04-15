@@ -57,10 +57,9 @@ brT:"Buy vs Rent — {ten} years",brIf:"Rent {rent}, invest at {inv}%:",
 brInv:"Investment corpus",brP4:"Property @ 4%",brP7:"Property @ 7%",brTR:"Total rent",
 brV1:"Math favours renting",brV2:"Close call",brV3:"Buying favourable",brOpp:"Opportunity cost",
 itT:"Market Intelligence",itFree:"Free Preview",itFreeD:"2 AI insights",itBtn:"Get Insights",itLoad:"Searching...",itMkt:"Market Direction",itTrend:"Price Trend",itTip:"Tip",itSrc:"Sources",
-prT:"Premium Intelligence",prH:"Comparing 2-3 properties?",prH2:"We'll tell you which one wins.",
-prD:"Every hidden cost. Side by side. RBI data — not broker opinion. ₹499/report.",
-prBtn:"Join Waitlist — Free for first 200",prOk:"You're in.",prOkD:"We'll reach out when Decision Engine launches.",
-foot:"2025-26 rates · RBI HPI · BIS/FRED · Reference only.",
+prT:"Premium Intelligence",prH:"Want a deeper verdict?",prH2:"Here's what we're building.",
+prD:"Help us build the Decision Engine — tell us what matters most to you.",
+prBtn:"Share Feedback + Join Waitlist",prOk:"You're in.",prOkD:"We'll reach out when Decision Engine launches.",
 },hi:{
 tag:"सच्ची लागत, साइन से पहले",heroS:"कुल लागत का सच",heroH:"हर खर्चा।",heroH2:"बिना झूठ।",heroP:"जो जानते हो भरो। बाकी हम बताएंगे।",
 s_prop:"प्रॉपर्टी",s_fin:"लोन और ब्याज",s_int:"इंटीरियर",s_life:"आपकी ज़िंदगी",s_govt:"सरकारी",s_rec:"हर महीने/साल",s_up:"जेब से + छिपे",
@@ -111,10 +110,9 @@ brT:"किराया या खरीद — {ten} साल",brIf:"किर
 brInv:"निवेश कॉर्पस",brP4:"प्रॉपर्टी @4%",brP7:"प्रॉपर्टी @7%",brTR:"कुल किराया",
 brV1:"किराया+निवेश बेहतर",brV2:"बराबरी",brV3:"खरीदना फायदे में",brOpp:"ऑपर्च्युनिटी कॉस्ट",
 itT:"मार्केट इंटेलिजेंस",itFree:"मुफ्त झलक",itFreeD:"2 AI इनसाइट्स",itBtn:"इनसाइट्स लाओ",itLoad:"खोज रहे हैं...",itMkt:"मार्केट दिशा",itTrend:"दाम रुख",itTip:"सलाह",itSrc:"स्रोत",
-prT:"प्रीमियम",prH:"2-3 प्रॉपर्टी तुलना?",prH2:"कौन सी जीतेगी, हम बताएंगे।",
-prD:"हर छिपा खर्चा। आमने-सामने। RBI डेटा। ₹499/रिपोर्ट।",
-prBtn:"वेटलिस्ट — पहले 200 मुफ्त",prOk:"लिस्ट में।",prOkD:"लॉन्च पर बताएंगे।",
-foot:"2025-26 दरें · RBI HPI · BIS/FRED · सिर्फ़ जानकारी।",
+prT:"प्रीमियम",prH:"और गहरा फ़ैसला चाहिए?",prH2:"हम ये बना रहे हैं।",
+prD:"Decision Engine बनाने में मदद करो — बताओ तुम्हें क्या चाहिए।",
+prBtn:"फ़ीडबैक दो + वेटलिस्ट में आओ",prOk:"लिस्ट में।",prOkD:"लॉन्च पर बताएंगे।",
 }};
 
 /* ═══ DATA — RBI HPI city-wise + Repo ═══ */
@@ -586,22 +584,22 @@ function App(){
             <div style={{position:"relative",zIndex:1}}>
               <div style={{fontSize:".5rem",fontWeight:800,letterSpacing:".14em",textTransform:"uppercase",color:"#ce2c66",marginBottom:5,fontFamily:"monospace"}}>Decision Engine</div>
               <h3 style={{fontSize:".92rem",fontWeight:900,fontFamily:"'Plus Jakarta Sans'",letterSpacing:"-.03em",lineHeight:1.2,marginBottom:4}}>{t("prH")}<br/><span style={{color:"#ce2c66"}}>{t("prH2")}</span></h3>
-              <p style={{fontSize:".64rem",color:"rgba(255,255,255,.55)",lineHeight:1.6,marginBottom:12}}>{t("prD")}</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4,marginBottom:14}}>
-                {[{n:lang==="hi"?"सही कीमत":"Fair Price",i:"balance"},{n:lang==="hi"?"5yr एग्ज़िट":"5yr Exit",i:"trending_flat"},{n:lang==="hi"?"टैक्स":"Tax Opt.",i:"savings"},{n:lang==="hi"?"प्रीपे":"Prepay",i:"speed"},{n:lang==="hi"?"तुलना":"Compare",i:"compare"},{n:lang==="hi"?"फ़ैसला":"Verdict",i:"verified"}].map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:3}}><span className="material-symbols-outlined" style={{fontSize:10,color:"#ce2c66",fontVariationSettings:"'FILL' 1"}}>{f.i}</span><span style={{fontSize:".48rem",color:"rgba(255,255,255,.65)"}}>{f.n}</span></div>)}
+              <div style={{display:"grid",gap:5,marginBottom:14}}>
+                {[
+                  {i:"compare",n:lang==="hi"?"3 प्रॉपर्टी साइड-बाय-साइड तुलना":"3-property side-by-side comparison",d:lang==="hi"?"हर छिपा खर्चा, एक नज़र में — अलग शहर भी चलेगा":"Every hidden cost at a glance — same city or different"},
+                  {i:"balance",n:lang==="hi"?"सही कीमत विश्लेषण":"Fair price analysis",d:lang==="hi"?"RBI HPI + माइक्रो-मार्केट डेटा से क्या सही कीमत है":"What the property should cost based on RBI HPI + micro-market data"},
+                  {i:"trending_flat",n:lang==="hi"?"5 साल एग्ज़िट सिमुलेशन":"5-year exit simulation",d:lang==="hi"?"अगर ज़िंदगी बदल गई — कितना फायदा या नुकसान":"If life changes — exactly how much you gain or lose"},
+                  {i:"family_restroom",n:lang==="hi"?"ज़िंदगी + लोन स्ट्रेस टेस्ट":"Life + loan stress test",d:lang==="hi"?"शादी, बच्चे, नौकरी, रेट बढ़त — सब एक साथ":"Marriage, kids, job switches, rate hikes — all colliding at once"},
+                  {i:"savings",n:lang==="hi"?"टैक्स + प्रीपेमेंट ऑप्टिमाइज़र":"Tax + prepayment optimizer",d:lang==="hi"?"जॉइंट ओनरशिप, HRA, 24(b)/80C — कैसे structure करो":"Joint ownership, HRA, 24(b)/80C — how to structure for max savings"},
+                  {i:"verified",n:lang==="hi"?"एक साफ़ फ़ैसला — डेटा से, दलाल से नहीं":"One clear verdict — from data, not a broker",d:lang==="hi"?"कौन सी प्रॉपर्टी जीतती है और क्यों":"Which property wins and exactly why"},
+                ].map((f,i)=><div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"8px 10px",borderRadius:10,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.06)"}}><span className="material-symbols-outlined" style={{fontSize:14,color:"#ce2c66",fontVariationSettings:"'FILL' 1",marginTop:1,flexShrink:0}}>{f.i}</span><div><div style={{fontSize:".58rem",fontWeight:700,color:"rgba(255,255,255,.85)"}}>{f.n}</div><div style={{fontSize:".48rem",color:"rgba(255,255,255,.4)",marginTop:1,lineHeight:1.4}}>{f.d}</div></div></div>)}
               </div>
-              <a href="https://form.typeform.com/to/MO2OazCu" target="_blank" rel="noopener noreferrer" style={{display:"block",width:"100%",padding:"12px",borderRadius:99,background:"linear-gradient(135deg,#522de6,#ce2c66)",color:"#fff",fontWeight:900,fontSize:".78rem",border:"none",cursor:"pointer",fontFamily:"'Plus Jakarta Sans'",textAlign:"center",textDecoration:"none",boxShadow:"0 8px 20px rgba(82,45,230,.25)"}}>{t("prBtn")}</a>
-              <div style={{textAlign:"center",marginTop:6,fontSize:".48rem",color:"rgba(255,255,255,.25)"}}>₹499/{lang==="hi"?"रिपोर्ट":"report"} · {lang==="hi"?"कोई स्पैम नहीं":"No spam"}</div>
+              <p style={{fontSize:".58rem",color:"rgba(255,255,255,.4)",lineHeight:1.5,marginBottom:10}}>{t("prD")}</p>
+              <a href="https://tally.so/r/b54Zee" target="_blank" rel="noopener noreferrer" style={{display:"block",width:"100%",padding:"12px",borderRadius:99,background:"linear-gradient(135deg,#522de6,#ce2c66)",color:"#fff",fontWeight:900,fontSize:".78rem",border:"none",cursor:"pointer",fontFamily:"'Plus Jakarta Sans'",textAlign:"center",textDecoration:"none",boxShadow:"0 8px 20px rgba(82,45,230,.25)"}}>{t("prBtn")}</a>
+              <div style={{textAlign:"center",marginTop:6,fontSize:".44rem",color:"rgba(255,255,255,.2)"}}>{lang==="hi"?"2 मिनट · कोई स्पैम नहीं":"2 min · No spam"}</div>
             </div>
           </div>
         </div>}
-
-      </div>}
-      </main>
-      <div style={{textAlign:"center",padding:"12px 16px 20px",fontSize:".48rem",color:"#787587",fontFamily:"monospace"}}>{t("foot")}<br/><strong style={{color:"#474556"}}>un-real-estate</strong></div>
-    </div>
-  );
-}
 
 /* ═══ COMPONENTS ═══ */
 function DRows({rows}){if(!rows)return null;return (<div>{rows.map((d,i)=><div key={i} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f4f3f7",gap:6}}><div style={{display:"flex",alignItems:"center",gap:4,flex:1}}>{d.cash&&<span style={{width:4,height:4,borderRadius:99,background:"#ba1a1a"}}/>}<span style={{fontSize:".62rem",color:d.b?"#1a1c1e":d.w?"#ba1a1a":"#474556",fontWeight:d.b?800:500}}>{d.l}</span></div><span style={{fontSize:".62rem",fontFamily:"'JetBrains Mono'",fontWeight:d.b?800:600,color:d.w?"#ba1a1a":"#1a1c1e",whiteSpace:"nowrap"}}>{typeof d.v==="number"?fF(d.v):d.v}</span></div>)}</div>)}
